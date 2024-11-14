@@ -1,6 +1,6 @@
 [package]
 name = "timet-tui"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Dag Østgulen Heradstveit <190020+scav@users.noreply.github.com>"]
 license = "MIT"
 edition = "2021"
