@@ -31,11 +31,29 @@ Endpoint can be defined with or without https, but http will fail.
 endpoint = '****'
 ```
 
-### Running
+## Running
 
 After completing configuration and setting up the environment variables, the application is started 
 either by setting `TIMET_API_KEY` and running it, or by prefixing the run command with
 `TIMET_API_KEY=abcdef1234567 ./timet-tui`.
+
+
+### Whalebrew
+It is possible to run Timet using [Whalebrew](https://github.com/whalebrew/whalebrew) using the same folders
+and settings files used to run natively.
+
+The following are mapped (and can be seen in the `Dockerfile`):
+```Dockerfile
+LABEL io.whalebrew.config.environment '["TIMET_CONFIG_HOME", "TIMET_API_KEY"]'
+LABEL io.whalebrew.config.volumes '["~/.config:/bin/config:rw"]'
+```
+
+- Build image:  
+`docker build -t timet .`
+- Install (and accept the questions)    
+`whalebrew install timet`B
+- Run
+`TIMET_API_KEY=**** TIMET_CONFIG_HOME=/bin/config timet`
 
 ## Development
 
