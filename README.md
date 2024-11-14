@@ -24,6 +24,8 @@ Storing this key securely is (not yet) in the scope for this application. **Do n
 ### Default configuration
 
 There is no automatic generation of `config.toml`, create it like this (endpoint can be found on slack)
+Endpoint can be defined with or without https, but http will fail.
+
 ```toml
 [api]
 endpoint = '****'

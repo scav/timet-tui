@@ -59,8 +59,11 @@ pub fn view(model: &mut Model, frame: &mut Frame) {
         Block::new()
             .borders(Borders::TOP)
             .title(format!(
-                "| release: {}-{} | config: {} |",
-                model.config.version, model.config.commit, model.config.config_location,
+                "| release: {}-{} | config: {} | endpoint: {} |",
+                model.config.version,
+                model.config.commit,
+                model.config.config_location,
+                model.config.api.endpoint,
             ))
             .title_alignment(ratatui::layout::Alignment::Center),
         main_layout[2],

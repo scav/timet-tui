@@ -36,8 +36,10 @@ impl Api {
     pub fn new(config: &Config) -> Self {
         let mut api_key = String::with_capacity(config.api.key.len());
         api_key.clone_from(&config.api.key);
-        let endpoint = format!("https://{}", config.api.endpoint);
-        Self { endpoint, api_key }
+        Self {
+            endpoint: config.api.endpoint.clone(),
+            api_key,
+        }
     }
 
     /// Get all months for given year
@@ -60,10 +62,7 @@ impl Api {
     /// Returns a vec of all existing entries for the given year and month.
     /// If the result is empty an empty list is returned ()
     pub fn get_month(&self, year: u32, month: u32) -> color_eyre::Result<Vec<TimetEntry>> {
-        let url = format!(
-            "{}/entries-bymonth?year={year}&month={month}",
-            self.endpoint
-        );
+        let url = format!("{}entries-bymonth?year={year}&month={month}", self.endpoint);
 
         match minreq::get(&url)
             .with_timeout(5)
