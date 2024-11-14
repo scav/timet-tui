@@ -83,7 +83,10 @@ fn handle_key(key: event::KeyEvent, model: &mut Model) -> Result<Option<Message>
 
 fn update(model: &mut Model, msg: Message) -> Result<Option<Message>> {
     match msg {
-        Message::Home => model.active_view = ActiveView::Home,
+        Message::Home => {
+            model.active_error_msg = None;
+            model.active_view = ActiveView::Home
+        }
         Message::DetailMonth => {
             model.set_active_month()?;
             model.active_view = ActiveView::Month;
@@ -99,6 +102,10 @@ fn update(model: &mut Model, msg: Message) -> Result<Option<Message>> {
         Message::RefreshCompleted => {
             model.overview = model.store.get_yearly_overview()?;
             model.active_view = ActiveView::Home;
+        }
+        Message::RefreshFailed => {
+            model.active_error_msg =
+                Some(String::from("Could not refresh items - H(ome) or q(uit)"));
         }
         Message::Quit => {
             model.running_state = RunningState::Done;

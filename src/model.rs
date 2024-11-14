@@ -17,6 +17,7 @@ pub struct Model {
     pub api: Arc<Api>,
     pub store: Arc<Store>,
     pub counter: i32,
+    pub active_error_msg: Option<String>,
     pub running_state: RunningState,
     pub now: chrono::DateTime<chrono::Utc>,
     pub active_view: ActiveView,
@@ -38,6 +39,7 @@ impl Model {
             api: Arc::new(api),
             store: Arc::new(store),
             counter: 0,
+            active_error_msg: None,
             running_state: RunningState::Running,
             now,
             active_view: ActiveView::Home,
@@ -56,11 +58,14 @@ impl Model {
         let sender = self.sender.clone();
         let now = self.now;
         thread::spawn(move || {
-            let items = api.get_year(&sender, now, 2024).unwrap();
-            store.entry_truncate().unwrap();
-            store.insert(items).unwrap();
-            // i think we want this to panic if an error occurs
-            sender.send(Message::RefreshCompleted).unwrap();
+            match api.get_year(&sender, now, 2024) {
+                Ok(items) => {
+                    store.entry_truncate().unwrap();
+                    store.insert(items).unwrap();
+                    sender.send(Message::RefreshCompleted).unwrap();
+                }
+                Err(_) => sender.send(Message::RefreshFailed).unwrap(),
+            };
         });
     }
 
@@ -125,6 +130,7 @@ pub enum Message {
     RefreshStarted,
     RefreshProgressing(u32),
     RefreshCompleted,
+    RefreshFailed,
     DetailMonth,
     Quit,
 }

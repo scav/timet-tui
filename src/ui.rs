@@ -13,6 +13,9 @@ use ratatui::{
     Frame,
 };
 
+const POPUP_STYLE: Style = Style::new()
+    .bg(tailwind::INDIGO.c900)
+    .fg(tailwind::INDIGO.c300);
 const BORDER_COLOR: Style = Style::new().fg(tailwind::INDIGO.c300);
 const SELECTED_COLOR: Style = Style::new()
     .fg(tailwind::INDIGO.c950)
@@ -143,10 +146,22 @@ fn render_loading(f: &mut Frame, model: &mut Model) {
         model.now.month()
     ))
     .centered()
+    .style(POPUP_STYLE)
     .block(block);
-    let area = centered_rect(60, 20, area);
-    f.render_widget(Clear, area); //this clears out the background
+
+    let area = centered_rect(40, 10, area);
+    f.render_widget(Clear, area);
     f.render_widget(paragraph, area);
+
+    if let Some(error) = &model.active_error_msg {
+        let block = Block::bordered().padding(Padding::new(5, 10, 1, 2));
+        let paragraph_error = Paragraph::new(error.to_string())
+            .centered()
+            .style(POPUP_STYLE.patch(Style::default().fg(tailwind::RED.c500)))
+            .block(block);
+        f.render_widget(Clear, area);
+        f.render_widget(paragraph_error, area);
+    };
 }
 
 /// Aligns the popup to the center of the view
