@@ -45,18 +45,21 @@ pub fn view(model: &mut Model, frame: &mut Frame) {
     )
     .split(frame.area());
 
-    frame.render_widget(Clear, main_layout[0]);
-    frame.render_widget(Clear, main_layout[1]);
-
     frame.render_widget(
-        Block::new().borders(Borders::TOP).title("| timet "),
+        Block::new()
+            .borders(Borders::TOP)
+            .title("| timet |")
+            .title_alignment(ratatui::layout::Alignment::Center),
         main_layout[0],
     );
     frame.render_widget(
-        Block::new().borders(Borders::TOP).title(format!(
-            "| release: {}-{} | config: {} ",
-            model.config.version, model.config.commit, model.config.config_location,
-        )),
+        Block::new()
+            .borders(Borders::TOP)
+            .title(format!(
+                "| release: {}-{} | config: {} |",
+                model.config.version, model.config.commit, model.config.config_location,
+            ))
+            .title_alignment(ratatui::layout::Alignment::Center),
         main_layout[2],
     );
 
