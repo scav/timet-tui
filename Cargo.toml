@@ -11,7 +11,7 @@ crossterm = { version = "0.28", features = ["event-stream"] }
 ratatui = "0.29"
 eyre = "0.6"
 color-eyre = "0.6"
-chrono = "0.4"
+chrono = { version = "0.4", features = ["serde"]}
 toml = "0.8"
 minreq = { version = "2", features = ["https-rustls-probe", "json-using-serde"] }
 serde = { version = "1", features = ["derive"] }

@@ -10,6 +10,7 @@ pub struct Config {
     pub commit: &'static str,
     #[serde(skip)]
     pub config_location: String,
+    pub default_project: Option<String>,
     pub api: Api,
 }
 

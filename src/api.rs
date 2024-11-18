@@ -1,8 +1,8 @@
 use std::sync::mpsc::Sender;
 
-use chrono::Datelike;
+use chrono::{DateTime, Datelike};
 use color_eyre::eyre::eyre;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::config::Config;
 use crate::model::Message;
@@ -26,6 +26,14 @@ pub struct TimetEntry {
     pub project_id: String,
 }
 
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Hours {
+    pub project_id: String,
+    pub date: chrono::NaiveDate,
+    pub hours: u32,
+}
+
 #[derive(Debug, Clone)]
 pub struct Api {
     endpoint: String,
@@ -46,7 +54,7 @@ impl Api {
     pub fn get_year(
         &self,
         sender: &Sender<Message>,
-        now: chrono::DateTime<chrono::Utc>,
+        now: DateTime<chrono::Utc>,
         year: u32,
     ) -> color_eyre::Result<Vec<TimetEntry>> {
         let mut months = vec![];

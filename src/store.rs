@@ -4,7 +4,8 @@ use chrono::NaiveDate;
 use color_eyre::{eyre::eyre, Result};
 use core::panic;
 use r2d2_sqlite::SqliteConnectionManager;
-use rusqlite::Connection;
+use rusqlite::{Connection, OptionalExtension};
+use std::str::FromStr;
 
 use crate::api::TimetEntry;
 use crate::config::Config;
@@ -17,7 +18,7 @@ pub struct Store {
 impl Store {
     pub fn new(config: &Config) -> Result<Self> {
         let manager = SqliteConnectionManager::file(format!("{}/timet.db", config.config_location));
-        let pool = r2d2::Pool::new(manager).unwrap();
+        let pool = r2d2::Pool::new(manager)?;
 
         let s = Store { pool };
         s.create_db()?;
@@ -36,6 +37,16 @@ impl Store {
     project_id TEXT NOT NULL
 )",
             (), // empty list of parameters.
+        )?;
+
+        conn.execute(
+            r#"
+            CREATE TABLE IF NOT EXISTS config (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL
+            )
+            "#,
+            (),
         )?;
 
         Ok(())
@@ -58,8 +69,48 @@ impl Store {
         Ok(result)
     }
 
+    pub fn default_project(&self) -> Result<Option<Project>> {
+        let conn = &self.pool.get()?;
+        let mut stmt = conn.prepare(
+            r#"
+            SELECT project_id, project_name FROM entry 
+            WHERE project_id = (SELECT value FROM config WHERE key = 'active_project')
+             "#,
+        )?;
+
+        stmt.query_row([], |row| {
+            Ok(Project {
+                project_id: row.get(0)?,
+                project_name: row.get(1)?,
+            })
+        })
+        .optional()
+        .map_err(|err| color_eyre::Report::new(err))
+    }
+
+    pub fn delete_active_project(&self) -> Result<()> {
+        let conn = &self.pool.get()?;
+        let mut stmt = conn.prepare("DELETE FROM config WHERE key = 'active_project'")?;
+        let result = stmt.execute([])?;
+        Ok(())
+    }
+
+    pub fn insert_active_project(&self, project_id: &str) -> Result<()> {
+        let conn = &self.pool.get()?;
+        let mut stmt = conn.prepare(
+            r#"
+            INSERT INTO config 
+            (key, value) VALUES('active_project', $1)
+            ON CONFLICT(key) DO UPDATE SET value = ($1);
+            "#,
+        )?;
+
+        let result = stmt.execute([&(project_id)])?;
+        Ok(())
+    }
+
     pub fn insert(&self, mut items: Vec<TimetEntry>) -> Result<()> {
-        let conn = &self.pool.get().unwrap();
+        let conn = &self.pool.get()?;
         let mut stmt = conn.prepare(
             r#"
                 INSERT INTO entry ( 
@@ -89,6 +140,25 @@ impl Store {
         Ok(())
     }
 
+    #[allow(clippy::let_and_return)]
+    pub fn projects(&self) -> Result<Vec<Project>> {
+        let conn = self.pool.get()?;
+        let mut stmt = conn
+            .prepare("select DISTINCT project_id, project_name FROM entry WHERE hours IS NOT 0 ORDER BY project_name")?;
+
+        let result = stmt
+            .query_map([], |row| {
+                Ok(Project {
+                    project_id: row.get(0)?,
+                    project_name: row.get(1)?,
+                })
+            })?
+            .map(|result| result.map_err(|err| color_eyre::Report::new(err)))
+            .collect::<Result<Vec<Project>>>();
+        result
+    }
+
+    #[allow(clippy::let_and_return)]
     pub fn get_days(&self) -> Result<Vec<DayEntry>> {
         let conn = self.pool.get()?;
         let mut stmt = conn.prepare(
@@ -98,7 +168,8 @@ impl Store {
             hours,
             project_name,
             project_id
-            FROM entry"#,
+            FROM entry
+            "#,
         )?;
         let result = stmt
             .query_map([], |row| {
@@ -117,36 +188,43 @@ impl Store {
 
     pub fn get_yearly_overview(&self) -> Result<Vec<Year>> {
         let conn = &self.pool.get()?;
-        let mut stmt = conn.prepare("SELECT hours FROM entry WHERE date LIKE ?1")?;
+        let mut stmt = conn.prepare(
+            r#"
+        WITH RECURSIVE months(m) AS (
+            SELECT 1
+            UNION ALL
+            SELECT m + 1 FROM months WHERE m < 12
+        )
+        SELECT 
+            printf('%02d', m) AS month,
+            COALESCE(SUM(e.hours), 0) AS total_hour
+        FROM 
+            months
+        LEFT JOIN entry e ON strftime('%Y', e.date) = strftime('%Y', 'now')
+            AND strftime('%m', e.date) = printf('%02d', m)
+            AND (project_id = (SELECT value FROM config WHERE key = 'active_project')
+                 OR NOT EXISTS (SELECT 1 FROM config WHERE key = 'active_project'))
+        GROUP BY m
+        ORDER BY m;
+        "#,
+        )?;
+        let data = stmt
+            .query_map([], |row| {
+                let month: u32 = row.get::<_, String>(0)?.parse().unwrap();
+                let total_hours: f32 = row.get(1)?;
+                let month_date = NaiveDate::from_ymd_opt(2024, month, 1).unwrap();
+                Ok(Year {
+                    hours: total_hours,
+                    month,
+                    month_name: month_date.format("%B").to_string(),
+                })
+            })?
+            .collect::<Result<Vec<Year>, _>>()?;
 
-        let now = chrono::Utc::now();
-
-        let mut years = vec![];
-        for i in 1..=now.month() {
-            let target_date = match NaiveDate::from_ymd_opt(now.year(), i, 1) {
-                Some(m) => m,
-                None => return Err(eyre!("Could not create date from {}-{i}-1", now.year())),
-            };
-            let mut current_month_year = target_date.format("%Y-%m").to_string();
-            current_month_year.push_str("-%");
-
-            let result = stmt.query_map(
-                [(&current_month_year)],
-                |row| -> Result<f32, rusqlite::Error> { row.get(0) },
-            )?;
-            let hour: f32 = result.into_iter().fold(0.0, |acc, e| acc + e.unwrap());
-
-            let month_name = target_date.format("%B").to_string();
-            years.push(Year {
-                hours: hour,
-                month: i,
-                month_name,
-            });
-        }
-
-        Ok(years)
+        Ok(data)
     }
 
+    #[allow(clippy::let_and_return)]
     pub fn get_month_overview(&self, month: u32, year: i32) -> Result<Vec<Month>> {
         let target_date = match NaiveDate::from_ymd_opt(year, month, 1) {
             Some(m) => m,
@@ -158,7 +236,15 @@ impl Store {
 
         let conn = self.pool.get()?;
         let mut stmt = conn.prepare(
-            "SELECT date, project_name, hours FROM entry WHERE date LIKE ?1 AND hours IS NOT 0 ORDER BY date ASC",
+            r#"
+            SELECT date, project_name, hours 
+            FROM entry 
+            WHERE date LIKE ?1 
+            AND (project_id = (SELECT value FROM config WHERE key = 'active_project')
+                 OR NOT EXISTS (SELECT 1 FROM config WHERE key = 'active_project'))
+            AND hours IS NOT 0 
+            ORDER BY date ASC
+            "#,
         )?;
         let result = stmt
             .query_map([(&current_month_year)], |row| {
@@ -195,6 +281,11 @@ pub struct DayEntry {
 pub struct Entry {
     pub date: NaiveDate,
     pub hours: f32,
+    pub project_name: String,
+}
+#[derive(Debug, Clone)]
+pub struct Project {
+    pub project_id: String,
     pub project_name: String,
 }
 
@@ -272,6 +363,18 @@ mod tests {
         sum = store.entry_count().unwrap();
         assert_eq!(sum, 0);
     }
+
+    #[test]
+    fn test_store_default_project() {
+        let mut store = create_store();
+        store.create_db().unwrap();
+        let insert = store.insert_active_project("foobar");
+        assert_eq!(insert.is_ok(), true);
+
+        let result = store.default_project();
+        assert!(result.is_ok());
+    }
+
     #[test]
     fn test_store_insert() {
         let mut store = create_store();
@@ -279,6 +382,21 @@ mod tests {
         let items = create_timet_entries();
         let result = store.insert(items);
         assert_eq!(result.is_ok(), true)
+    }
+
+    #[test]
+    fn test_store_projects() {
+        let mut store = create_store();
+        store.create_db().unwrap();
+        let items = create_timet_entries();
+        store.insert(items).unwrap();
+
+        let projects = store.projects();
+        assert!(projects.is_ok());
+        assert!(
+            !projects.unwrap().is_empty(),
+            "should always return test projects"
+        );
     }
 
     #[test]
