@@ -14,9 +14,6 @@ use timet_tui::{
 };
 
 fn main() -> Result<()> {
-    // for i in std::env::vars().into_iter() {
-    //     println!("{}={}", i.0, i.1);
-    // }
     tui::install_panic_hook();
     let config = Config::new()?;
     let mut terminal = tui::init_terminal()?;
