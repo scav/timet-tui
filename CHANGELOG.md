@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.0](https://github.com/scav/timet-tui/compare/v0.2.0...v0.3.0) (2024-11-22)
+
+
+### Features
+
+* adds option to set an active project ([#5](https://github.com/scav/timet-tui/issues/5)) ([5dec40c](https://github.com/scav/timet-tui/commit/5dec40cc04ad66fd3e78878d747c5f8570134b64))
+* support installing through Whalebrew ([98f8dbf](https://github.com/scav/timet-tui/commit/98f8dbfc01c06d71a9fe2e7fed837a2b226c2ca0))
+
 ## [0.2.0](https://github.com/scav/timet-tui/compare/v0.1.0...v0.2.0) (2024-11-14)
 
 
