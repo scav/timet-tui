@@ -9,14 +9,11 @@ use timet_tui::{
     api,
     config::Config,
     model::{ActiveView, Message, Model, RunningState},
-    store, tui,
+    project, store, tui,
     ui::view,
 };
 
 fn main() -> Result<()> {
-    // for i in std::env::vars().into_iter() {
-    //     println!("{}={}", i.0, i.1);
-    // }
     tui::install_panic_hook();
     let config = Config::new()?;
     let mut terminal = tui::init_terminal()?;
@@ -65,54 +62,87 @@ fn handle_event(model: &mut Model, receiver: &Receiver<Message>) -> Result<Optio
 
 fn handle_key(key: event::KeyEvent, model: &mut Model) -> Result<Option<Message>> {
     match key.code {
-        KeyCode::Char('H') => Ok(Some(Message::Home)),
-        KeyCode::Char('r') => Ok(Some(Message::RefreshStarted)),
+        // Global keys
         KeyCode::Char('q') => Ok(Some(Message::Quit)),
-        KeyCode::Char('j') => {
-            model.next_row()?;
-            Ok(None)
+        KeyCode::Char('H') => Ok(Some(Message::Home)),
+
+        _ => {
+            match model.active_view {
+                ActiveView::Hours => project::handle_key(key, &mut model.register_model),
+                // this breaks detailMonth because it has no keys attached
+                ActiveView::Home => match key.code {
+                    KeyCode::Char('H') => Ok(Some(Message::Home)),
+                    KeyCode::Char('p') => Ok(Some(Message::Hours(project::ProjectMessage::Open))),
+                    KeyCode::Char('r') => Ok(Some(Message::RefreshStarted)),
+                    KeyCode::Char('j') => {
+                        model.next_row()?;
+                        Ok(None)
+                    }
+                    KeyCode::Char('k') => {
+                        model.previous_row()?;
+                        Ok(None)
+                    }
+                    KeyCode::Enter => {
+                        model.set_active_month()?;
+                        Ok(Some(Message::DetailMonth))
+                    }
+                    _ => Ok(None),
+                },
+                _ => Ok(None),
+            }
         }
-        KeyCode::Char('k') => {
-            model.previous_row()?;
-            Ok(None)
-        }
-        KeyCode::Enter => {
-            model.set_active_month()?;
-            Ok(Some(Message::DetailMonth))
-        }
-        _ => Ok(None),
     }
 }
 
 fn update(model: &mut Model, msg: Message) -> Result<Option<Message>> {
     match msg {
+        Message::View(view) => {
+            model.active_view = view;
+            Ok(None)
+        }
         Message::Home => {
             model.active_error_msg = None;
-            model.active_view = ActiveView::Home
+            Ok(Some(Message::View(ActiveView::Home)))
         }
         Message::DetailMonth => {
             model.set_active_month()?;
-            model.active_view = ActiveView::Month;
+            Ok(Some(Message::View(ActiveView::Month)))
         }
         Message::RefreshStarted => {
-            model.active_view = ActiveView::Loading;
             model.refresh();
+            Ok(Some(Message::View(ActiveView::Loading)))
         }
         Message::RefreshProgressing(month) => {
-            model.active_view = ActiveView::Loading;
             model.update_month = month;
+            Ok(Some(Message::View(ActiveView::Loading)))
         }
         Message::RefreshCompleted => {
             model.overview = model.store.get_yearly_overview()?;
-            model.active_view = ActiveView::Home;
+            Ok(Some(Message::View(ActiveView::Home)))
         }
         Message::RefreshFailed => {
             model.active_error_msg =
                 Some(String::from("Could not refresh items - H(ome) or q(uit)"));
+            Ok(None)
         }
+        Message::Hours(m) => project::update(&mut model.register_model, m),
         Message::Quit => {
             model.running_state = RunningState::Done;
+            Ok(None)
         }
-    };
-    Ok(None)
+        Message::ActiveProject(project) => match project {
+            Some(p) => {
+                model.store.insert_active_project(&p.project_id)?;
+                model.active_project = Some(p);
+                model.overview = model.store.get_yearly_overview()?;
+                Ok(Some(Message::View(ActiveView::Home)))
+            }
+            None => {
+                model.store.delete_active_project()?;
+                model.active_project = None;
+                model.overview = model.store.get_yearly_overview()?;
+                Ok(Some(Message::View(ActiveView::Home)))
+            }
+        },
+    }
 }

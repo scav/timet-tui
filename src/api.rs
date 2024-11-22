@@ -1,6 +1,6 @@
 use std::sync::mpsc::Sender;
 
-use chrono::Datelike;
+use chrono::{DateTime, Datelike};
 use color_eyre::eyre::eyre;
 use serde::Deserialize;
 
@@ -46,7 +46,7 @@ impl Api {
     pub fn get_year(
         &self,
         sender: &Sender<Message>,
-        now: chrono::DateTime<chrono::Utc>,
+        now: DateTime<chrono::Utc>,
         year: u32,
     ) -> color_eyre::Result<Vec<TimetEntry>> {
         let mut months = vec![];

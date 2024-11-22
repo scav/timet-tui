@@ -8,7 +8,8 @@ use ratatui::widgets::TableState;
 
 use crate::api::Api;
 use crate::config::Config;
-use crate::store::{Month, Store, Year};
+use crate::project::{ProjectMessage, ProjectModel};
+use crate::store::{Month, Project, Store, Year};
 
 #[derive(Debug)]
 pub struct Model {
@@ -17,10 +18,13 @@ pub struct Model {
     pub api: Arc<Api>,
     pub store: Arc<Store>,
     pub counter: i32,
+    pub register_model: ProjectModel,
     pub active_error_msg: Option<String>,
     pub running_state: RunningState,
     pub now: chrono::DateTime<chrono::Utc>,
     pub active_view: ActiveView,
+    pub projects: Vec<Project>,
+    pub active_project: Option<Project>,
     pub active_year: i32,
     pub active_month: u32,
     pub update_month: u32,
@@ -33,16 +37,21 @@ impl Model {
     pub fn new(sender: Sender<Message>, api: Api, store: Store, config: Config) -> Result<Self> {
         let now = chrono::Utc::now();
         let overview = store.get_yearly_overview()?;
+        let active_project = store.default_project()?;
+        let rs = ProjectModel::new(store.clone())?;
         Ok(Model {
             config,
             sender,
             api: Arc::new(api),
             store: Arc::new(store),
             counter: 0,
+            register_model: rs,
             active_error_msg: None,
             running_state: RunningState::Running,
             now,
             active_view: ActiveView::Home,
+            projects: vec![],
+            active_project,
             active_year: now.year(),
             active_month: 0,
             update_month: 0,
@@ -108,13 +117,20 @@ impl Model {
 
         Ok(())
     }
+
+    pub fn set_projects(&mut self) -> Result<()> {
+        self.projects = self.store.projects()?;
+
+        Ok(())
+    }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq, Hash)]
 pub enum ActiveView {
     Home,
     Loading,
     Month,
+    Hours,
 }
 
 #[derive(Debug, Default, PartialEq, Eq)]
@@ -124,9 +140,12 @@ pub enum RunningState {
     Done,
 }
 
-#[derive(Debug, PartialEq, Eq, Hash)]
+#[derive(Debug)]
 pub enum Message {
+    View(ActiveView),
     Home,
+    Hours(ProjectMessage),
+    ActiveProject(Option<Project>),
     RefreshStarted,
     RefreshProgressing(u32),
     RefreshCompleted,

@@ -1,4 +1,7 @@
-use crate::model::{ActiveView, Model};
+use crate::{
+    model::{ActiveView, Model},
+    project,
+};
 use chrono::Datelike;
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
@@ -13,15 +16,15 @@ use ratatui::{
     Frame,
 };
 
-const POPUP_STYLE: Style = Style::new()
+pub const POPUP_STYLE: Style = Style::new()
     .bg(tailwind::INDIGO.c900)
     .fg(tailwind::INDIGO.c300);
-const BORDER_COLOR: Style = Style::new().fg(tailwind::INDIGO.c300);
-const SELECTED_COLOR: Style = Style::new()
+pub const BORDER_COLOR: Style = Style::new().fg(tailwind::INDIGO.c300);
+pub const SELECTED_COLOR: Style = Style::new()
     .fg(tailwind::INDIGO.c950)
     .bg(tailwind::INDIGO.c300);
 
-fn alternate_color(i: usize) -> Style {
+pub fn alternate_color(i: usize) -> Style {
     match i % 2 {
         0 => Style::default().bg(tailwind::INDIGO.c900),
         _ => Style::default().bg(tailwind::INDIGO.c950),
@@ -29,7 +32,7 @@ fn alternate_color(i: usize) -> Style {
 }
 
 // naive implementation of a filler based on colour
-fn fill_color(i: usize) -> Style {
+pub fn fill_color(i: usize) -> Style {
     match i % 2 {
         0 => Style::default().bg(tailwind::INDIGO.c950),
         _ => Style::default().bg(tailwind::INDIGO.c900),
@@ -51,7 +54,14 @@ pub fn view(model: &mut Model, frame: &mut Frame) {
     frame.render_widget(
         Block::new()
             .borders(Borders::TOP)
-            .title("| timet |")
+            .title(format!(
+                "| timet | {} |",
+                if model.active_project.is_some() {
+                    &model.active_project.as_ref().unwrap().project_name
+                } else {
+                    "NA"
+                }
+            ))
             .title_alignment(ratatui::layout::Alignment::Center),
         main_layout[0],
     );
@@ -94,6 +104,9 @@ pub fn view(model: &mut Model, frame: &mut Frame) {
             render_home(frame, model, inner_overview[0]);
             render_active_month(frame, model, inner_overview[1]);
         }
+        ActiveView::Hours => {
+            project::render(frame, &mut model.register_model, inner_layout[0]);
+        }
     }
 }
 
@@ -107,13 +120,15 @@ fn render_help(f: &mut Frame, area: Rect) {
         .height(2);
 
     let key_map = vec![
-        ("h", "Home screen"),
+        ("H", "Home screen"),
         ("o", "Overview"),
-        ("q", "Quit application"),
         ("r", "Refresh database"),
+        ("h", "Add daily hours"),
+        ("p", "Active project"),
         ("k", "Up"),
         ("j", "Down"),
         ("Enter", "Select"),
+        ("q", "Quit application"),
     ];
 
     let keys = key_map
@@ -168,7 +183,7 @@ fn render_loading(f: &mut Frame, model: &mut Model) {
 }
 
 /// Aligns the popup to the center of the view
-fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
+pub fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
     let popup_layout = Layout::vertical([
         Constraint::Percentage((100 - percent_y) / 2),
         Constraint::Percentage(percent_y),
