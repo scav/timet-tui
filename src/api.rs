@@ -2,7 +2,7 @@ use std::sync::mpsc::Sender;
 
 use chrono::{DateTime, Datelike};
 use color_eyre::eyre::eyre;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
 use crate::config::Config;
 use crate::model::Message;
@@ -24,14 +24,6 @@ pub struct TimetEntry {
     pub hours: f64,
     pub project_name: String,
     pub project_id: String,
-}
-
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Hours {
-    pub project_id: String,
-    pub date: chrono::NaiveDate,
-    pub hours: u32,
 }
 
 #[derive(Debug, Clone)]
