@@ -8,6 +8,7 @@ use ratatui::widgets::TableState;
 
 use crate::api::Api;
 use crate::config::Config;
+use crate::hours::{HoursMessage, HoursModel};
 use crate::project::{ProjectMessage, ProjectModel};
 use crate::store::{Month, Project, Store, Year};
 
@@ -19,6 +20,7 @@ pub struct Model {
     pub store: Arc<Store>,
     pub counter: i32,
     pub register_model: ProjectModel,
+    pub add_hours_model: HoursModel,
     pub active_error_msg: Option<String>,
     pub running_state: RunningState,
     pub now: chrono::DateTime<chrono::Utc>,
@@ -39,13 +41,15 @@ impl Model {
         let overview = store.get_yearly_overview()?;
         let active_project = store.default_project()?;
         let rs = ProjectModel::new(store.clone())?;
+        let hr = HoursModel::new(api.clone(), store.clone());
         Ok(Model {
             config,
             sender,
-            api: Arc::new(api),
-            store: Arc::new(store),
+            api: Arc::new(api.clone()),
+            store: Arc::new(store.clone()),
             counter: 0,
             register_model: rs,
+            add_hours_model: hr,
             active_error_msg: None,
             running_state: RunningState::Running,
             now,
@@ -131,6 +135,7 @@ pub enum ActiveView {
     Loading,
     Month,
     Hours,
+    LogHours,
 }
 
 #[derive(Debug, Default, PartialEq, Eq)]
@@ -145,6 +150,7 @@ pub enum Message {
     View(ActiveView),
     Home,
     Hours(ProjectMessage),
+    AddHours(HoursMessage),
     ActiveProject(Option<Project>),
     RefreshStarted,
     RefreshProgressing(u32),

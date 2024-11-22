@@ -2,7 +2,7 @@ use std::sync::mpsc::Sender;
 
 use chrono::{DateTime, Datelike};
 use color_eyre::eyre::eyre;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::config::Config;
 use crate::model::Message;
@@ -24,6 +24,14 @@ pub struct TimetEntry {
     pub hours: f64,
     pub project_name: String,
     pub project_id: String,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Hours<'a> {
+    pub project: &'a str,
+    pub date: chrono::NaiveDate,
+    pub hours: f32,
 }
 
 #[derive(Debug, Clone)]
@@ -75,7 +83,53 @@ impl Api {
             None => Err(eyre!("No entries in response {}", url)),
         }
     }
+
+    pub fn post_hours(&self, hours: &Hours) -> color_eyre::Result<()> {
+        let response = minreq::post(format!("{}entries-upsert-one", self.endpoint))
+            .with_timeout(5)
+            .with_header("X-API-KEY", &self.api_key)
+            .with_json(hours)?
+            .send()?;
+
+        if response.status_code != 200 {
+            return Err(eyre!(
+                "respone contains invalid or unexpected tatus code\n{:?}\n{:?}",
+                response.status_code,
+                response.as_str()
+            ));
+        }
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]
-mod tests {}
+mod tests {
+    use crate::api::{Api, Hours};
+    use crate::config::{self, Config};
+
+    #[ignore = "integration tests not yet planned"]
+    #[test]
+    fn post_hours_test() {
+        let cfg = Config {
+            version: "0-test",
+            commit: "sdfsfds",
+            config_location: "".to_string(),
+            default_project: None,
+            api: config::Api {
+                endpoint: std::env::var("TIMET_API_ENDPOINT").unwrap(),
+                key: std::env::var("TIMET_API_KEY").unwrap(),
+            },
+        };
+
+        let api = Api::new(&cfg);
+
+        let res = api.post_hours(&Hours {
+            project: &std::env::var("TIMET_PROJECT").unwrap(),
+            date: chrono::NaiveDate::from_ymd_opt(2024, 11, 30).unwrap(),
+            hours: 0.0,
+        });
+
+        assert!(res.is_ok())
+    }
+}

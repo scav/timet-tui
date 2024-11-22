@@ -8,6 +8,7 @@ use ratatui::crossterm::event::{self, Event, KeyCode};
 use timet_tui::{
     api,
     config::Config,
+    hours,
     model::{ActiveView, Message, Model, RunningState},
     project, store, tui,
     ui::view,
@@ -65,9 +66,20 @@ fn handle_key(key: event::KeyEvent, model: &mut Model) -> Result<Option<Message>
         // Global keys
         KeyCode::Char('q') => Ok(Some(Message::Quit)),
         KeyCode::Char('H') => Ok(Some(Message::Home)),
+        KeyCode::Char('l') => match model.active_project.clone() {
+            Some(project) => Ok(Some(Message::AddHours(hours::HoursMessage::Open(
+                project.project_id,
+            )))),
+            _ => {
+                model.active_error_msg =
+                    Some("An active project must be set to log hours".to_string());
+                Ok(None)
+            }
+        },
 
         _ => {
             match model.active_view {
+                ActiveView::LogHours => hours::handle_key(key, &mut model.add_hours_model),
                 ActiveView::Hours => project::handle_key(key, &mut model.register_model),
                 // this breaks detailMonth because it has no keys attached
                 ActiveView::Home => match key.code {
@@ -144,5 +156,6 @@ fn update(model: &mut Model, msg: Message) -> Result<Option<Message>> {
                 Ok(Some(Message::View(ActiveView::Home)))
             }
         },
+        Message::AddHours(hmsg) => hours::update(&mut model.add_hours_model, hmsg),
     }
 }

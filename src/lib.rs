@@ -6,4 +6,5 @@ pub mod tui;
 pub mod ui;
 
 // contains the widgets
+pub mod hours;
 pub mod project;

@@ -1,4 +1,5 @@
 use crate::{
+    hours,
     model::{ActiveView, Model},
     project,
 };
@@ -107,6 +108,7 @@ pub fn view(model: &mut Model, frame: &mut Frame) {
         ActiveView::Hours => {
             project::render(frame, &mut model.register_model, inner_layout[0]);
         }
+        ActiveView::LogHours => hours::render(frame, &mut model.add_hours_model, inner_layout[0]),
     }
 }
 
@@ -123,7 +125,7 @@ fn render_help(f: &mut Frame, area: Rect) {
         ("H", "Home screen"),
         ("o", "Overview"),
         ("r", "Refresh database"),
-        ("h", "Add daily hours"),
+        ("l", "Log hours"),
         ("p", "Active project"),
         ("k", "Up"),
         ("j", "Down"),

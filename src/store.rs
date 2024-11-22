@@ -34,7 +34,8 @@ impl Store {
     date TEXT NOT NULL,
     hours REAL NOT NULL,
     project_name TEXT NOT NULL,
-    project_id TEXT NOT NULL
+    project_id TEXT NOT NULL,
+    UNIQUE(date, project_id) ON CONFLICT REPLACE
 )",
             (), // empty list of parameters.
         )?;
@@ -140,6 +141,27 @@ impl Store {
         Ok(())
     }
 
+    pub fn insert_hours(&self, project_id: &str, hours: &f32, date: &NaiveDate) -> Result<()> {
+        let project_name = self.get_project_name(project_id)?;
+
+        let conn = &self.pool.get()?;
+        let mut stmt = conn.prepare(
+            r#"
+                INSERT INTO entry ( 
+                    date,                   
+                    hours, 
+                    project_name,
+                    project_id
+                )
+                VALUES (?1, ?2, ?3, ?4)
+                "#,
+        )?;
+
+        stmt.execute((date, hours, project_name, project_id))?;
+
+        Ok(())
+    }
+
     #[allow(clippy::let_and_return)]
     pub fn projects(&self) -> Result<Vec<Project>> {
         let conn = self.pool.get()?;
@@ -156,6 +178,15 @@ impl Store {
             .map(|result| result.map_err(|err| color_eyre::Report::new(err)))
             .collect::<Result<Vec<Project>>>();
         result
+    }
+
+    pub fn get_project_name(&self, project_id: &str) -> Result<String> {
+        let conn = self.pool.get()?;
+        let mut stmt = conn.prepare("SELECT project_name FROM entry WHERE project_id = ?")?;
+
+        let result: String = stmt.query_row([project_id], |row| row.get(0))?;
+
+        Ok(result)
     }
 
     #[allow(clippy::let_and_return)]
@@ -272,7 +303,7 @@ pub struct EntryContainer<T> {
 pub struct DayEntry {
     pub id: i64,
     pub date: NaiveDate,
-    pub hours: f64,
+    pub hours: f32,
     pub project_name: String,
     pub project_id: String,
 }
@@ -382,6 +413,18 @@ mod tests {
         let items = create_timet_entries();
         let result = store.insert(items);
         assert_eq!(result.is_ok(), true)
+    }
+
+    #[test]
+    fn test_store_insert_hours() {
+        let mut store = create_store();
+        store.create_db().unwrap();
+        let items = create_timet_entries();
+        store.insert(items.clone()).unwrap();
+        let project = items.get(0).unwrap();
+        let result =
+            store.insert_hours(&project.project_id, &7.5, &chrono::Utc::now().date_naive());
+        assert_eq!(result.is_ok(), true, "{:?}", &result)
     }
 
     #[test]
