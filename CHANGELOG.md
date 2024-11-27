@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/scav/timet-tui/compare/v0.3.0...v0.4.0) (2024-11-27)
+
+
+### Features
+
+* adds experimental support for logging hours ([#11](https://github.com/scav/timet-tui/issues/11)) ([069a738](https://github.com/scav/timet-tui/commit/069a7384f6903bfe80656d11662a77d1b1e4ad78))
+
 ## [0.3.0](https://github.com/scav/timet-tui/compare/v0.2.0...v0.3.0) (2024-11-22)
 
 
