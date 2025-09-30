@@ -217,7 +217,7 @@ impl Store {
         result
     }
 
-    pub fn get_yearly_overview(&self) -> Result<Vec<Year>> {
+    pub fn get_yearly_overview(&self, year: i32) -> Result<Vec<Year>> {
         let conn = &self.pool.get()?;
         let mut stmt = conn.prepare(
             r#"
@@ -243,7 +243,7 @@ impl Store {
             .query_map([], |row| {
                 let month: u32 = row.get::<_, String>(0)?.parse().unwrap();
                 let total_hours: f32 = row.get(1)?;
-                let month_date = NaiveDate::from_ymd_opt(2024, month, 1).unwrap();
+                let month_date = NaiveDate::from_ymd_opt(year, month, 1).unwrap();
                 Ok(Year {
                     hours: total_hours,
                     month,
@@ -448,7 +448,7 @@ mod tests {
         store.create_db().unwrap();
         let items = create_timet_entries();
         store.insert(items).unwrap();
-        let result = store.get_yearly_overview();
+        let result = store.get_yearly_overview(2024);
         dbg!(&result);
         assert_eq!(result.is_ok(), true);
     }

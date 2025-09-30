@@ -38,7 +38,7 @@ pub struct Model {
 impl Model {
     pub fn new(sender: Sender<Message>, api: Api, store: Store, config: Config) -> Result<Self> {
         let now = chrono::Utc::now();
-        let overview = store.get_yearly_overview()?;
+        let overview = store.get_yearly_overview(now.year())?;
         let active_project = store.default_project()?;
         let rs = ProjectModel::new(store.clone())?;
         let hr = HoursModel::new(api.clone(), store.clone());
@@ -71,7 +71,7 @@ impl Model {
         let sender = self.sender.clone();
         let now = self.now;
         thread::spawn(move || {
-            match api.get_year(&sender, now, 2024) {
+            match api.get_year(&sender, now, now.year() as u32) {
                 Ok(items) => {
                     store.entry_truncate().unwrap();
                     store.insert(items).unwrap();
@@ -117,7 +117,9 @@ impl Model {
 
     pub fn set_active_month(&mut self) -> Result<()> {
         self.active_month = self.table_state.selected().unwrap() as u32 + 1;
-        self.overview_month = self.store.get_month_overview(self.active_month, 2024)?;
+        self.overview_month = self
+            .store
+            .get_month_overview(self.active_month, self.active_year)?;
 
         Ok(())
     }

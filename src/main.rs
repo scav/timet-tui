@@ -129,7 +129,7 @@ fn update(model: &mut Model, msg: Message) -> Result<Option<Message>> {
             Ok(Some(Message::View(ActiveView::Loading)))
         }
         Message::RefreshCompleted => {
-            model.overview = model.store.get_yearly_overview()?;
+            model.overview = model.store.get_yearly_overview(model.active_year)?;
             Ok(Some(Message::View(ActiveView::Home)))
         }
         Message::RefreshFailed => {
@@ -146,13 +146,13 @@ fn update(model: &mut Model, msg: Message) -> Result<Option<Message>> {
             Some(p) => {
                 model.store.insert_active_project(&p.project_id)?;
                 model.active_project = Some(p);
-                model.overview = model.store.get_yearly_overview()?;
+                model.overview = model.store.get_yearly_overview(model.active_year)?;
                 Ok(Some(Message::View(ActiveView::Home)))
             }
             None => {
                 model.store.delete_active_project()?;
                 model.active_project = None;
-                model.overview = model.store.get_yearly_overview()?;
+                model.overview = model.store.get_yearly_overview(model.active_year)?;
                 Ok(Some(Message::View(ActiveView::Home)))
             }
         },
