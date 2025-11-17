@@ -1,5 +1,5 @@
 use color_eyre::eyre::eyre;
-use color_eyre::Result;
+use color_eyre::{Report, Result, Section};
 use serde::Deserialize;
 
 #[derive(Deserialize, Debug)]
@@ -22,13 +22,14 @@ pub struct Api {
 }
 
 impl Config {
-    pub fn new() -> Result<Self> {
+    pub fn new() -> Result<Self, Report> {
         let path = locate_config();
         let file = &std::fs::read_to_string(format!("{}/config.toml", &path))?;
         let mut cfg = toml::from_str::<Config>(file)?;
         cfg.config_location = path;
         cfg.api.endpoint = set_endpoint(&cfg.api.endpoint)?;
-        cfg.api.key = std::env::var("TIMET_API_KEY")?;
+        cfg.api.key = std::env::var("TIMET_API_KEY")
+            .with_suggestion(move || "Make sure TIMET_API_KEY is set")?;
         cfg.version = env!("CARGO_PKG_VERSION");
         cfg.commit = env!("GIT_COMMIT_HASH");
 
@@ -36,7 +37,7 @@ impl Config {
     }
 }
 
-fn set_endpoint(endpoint: &str) -> Result<String> {
+fn set_endpoint(endpoint: &str) -> Result<String, Report> {
     match endpoint {
         e if e.starts_with("http://") => Err(eyre!("http is not a valid protocol for endpoint")),
         e if e.starts_with("https://") => {

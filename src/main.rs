@@ -3,7 +3,8 @@ use std::{
     time::Duration,
 };
 
-use color_eyre::Result;
+use color_eyre::{Report, Result};
+use eyre::eyre;
 use ratatui::crossterm::event::{self, Event, KeyCode};
 use timet_tui::{
     api,
@@ -14,8 +15,20 @@ use timet_tui::{
     ui::view,
 };
 
-fn main() -> Result<()> {
+fn main() -> Result<(), Report> {
     tui::install_panic_hook();
+    color_eyre::install()?;
+
+    let result = match app() {
+        Ok(_) => Ok(()),
+        Err(err) => Err(eyre!(err)),
+    };
+
+    tui::restore_terminal()?;
+
+    result
+}
+fn app() -> Result<()> {
     let config = Config::new()?;
     let mut terminal = tui::init_terminal()?;
     let remote_api = api::Api::new(&config);
@@ -36,7 +49,6 @@ fn main() -> Result<()> {
         }
     }
 
-    tui::restore_terminal()?;
     Ok(())
 }
 
