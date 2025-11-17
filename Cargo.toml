@@ -6,11 +6,16 @@ license = "MIT"
 edition = "2021"
 build = "build.rs"
 
+[profile.dev.package.backtrace]
+opt-level = 3
+
 [dependencies]
 crossterm = { version = "0.28", features = ["event-stream"] }
 ratatui = "0.29"
+log = "0.4"
+fern = "0.7"
 eyre = "0.6"
-color-eyre = "0.6"
+color-eyre = {version ="0.6", default-features = false }
 chrono = { version = "0.4", features = ["serde"]}
 toml = "0.9"
 minreq = { version = "2", features = ["https-rustls-probe", "json-using-serde"] }
@@ -19,3 +24,4 @@ serde_json = "1"
 rusqlite = { version = "0.37", features = ["bundled", "chrono"] }
 r2d2 = "0.8"
 r2d2_sqlite = "0.31"
+humantime = "2.3.0"

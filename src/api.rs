@@ -80,7 +80,12 @@ impl Api {
             .entries
         {
             Some(e) => Ok(e),
-            None => Err(eyre!("No entries in response {}", url)),
+            None => Err(eyre!(
+                "No entries in response {} for m{}/y{}",
+                url,
+                month,
+                year
+            )),
         }
     }
 
@@ -93,7 +98,7 @@ impl Api {
 
         if response.status_code != 200 {
             return Err(eyre!(
-                "respone contains invalid or unexpected tatus code\n{:?}\n{:?}",
+                "respone contains invalid or unexpected status code\n{:?}\n{:?}",
                 response.status_code,
                 response.as_str()
             ));

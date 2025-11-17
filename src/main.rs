@@ -1,21 +1,65 @@
 use std::{
     sync::mpsc::{self, Receiver, Sender},
-    time::Duration,
+    time::{Duration, SystemTime},
 };
 
-use color_eyre::Result;
+use chrono::Utc;
+use color_eyre::{Report, Result, Section};
+use eyre::eyre;
+use log::error;
 use ratatui::crossterm::event::{self, Event, KeyCode};
 use timet_tui::{
     api,
-    config::Config,
+    config::{self, Config},
     hours,
     model::{ActiveView, Message, Model, RunningState},
     project, store, tui,
     ui::view,
 };
 
-fn main() -> Result<()> {
+fn main() -> Result<(), Report> {
     tui::install_panic_hook();
+    color_eyre::install()?;
+
+    let time = Utc::now().format("%Y%m%d%H%M").to_string();
+    let mut tmp_location = std::env::temp_dir();
+    tmp_location.push(format!("timet-{time}"));
+    tmp_location.set_extension("log");
+
+    let log_location = match tmp_location.to_str() {
+        Some(location) => Ok(location),
+        None => Err(eyre!("Log file path is not a valid path")),
+    }?;
+
+    fern::Dispatch::new()
+        .format(|out, message, record| {
+            out.finish(format_args!(
+                "[{} {} {} v{}({})] {}",
+                humantime::format_rfc3339_seconds(SystemTime::now()),
+                record.level(),
+                record.target(),
+                config::VERSION,
+                config::COMMIT,
+                message
+            ))
+        })
+        .level(log::LevelFilter::Info)
+        .chain(fern::log_file(log_location)?)
+        .apply()?;
+
+    let result = match app() {
+        Ok(_) => Ok(()),
+        Err(err) => {
+            error!("{:?}", err.root_cause());
+            Err(eyre!(err).suggestion(format!("Check logs for more info: {}", log_location)))
+        }
+    };
+
+    tui::restore_terminal()?;
+
+    result
+}
+fn app() -> Result<()> {
     let config = Config::new()?;
     let mut terminal = tui::init_terminal()?;
     let remote_api = api::Api::new(&config);
@@ -36,7 +80,6 @@ fn main() -> Result<()> {
         }
     }
 
-    tui::restore_terminal()?;
     Ok(())
 }
 
@@ -132,9 +175,8 @@ fn update(model: &mut Model, msg: Message) -> Result<Option<Message>> {
             model.overview = model.store.get_yearly_overview(model.active_year)?;
             Ok(Some(Message::View(ActiveView::Home)))
         }
-        Message::RefreshFailed => {
-            model.active_error_msg =
-                Some(String::from("Could not refresh items - H(ome) or q(uit)"));
+        Message::RefreshFailed(msg) => {
+            model.active_error_msg = Some(String::from(format!("API error: {}", msg.as_str())));
             Ok(None)
         }
         Message::Hours(m) => project::update(&mut model.register_model, m),

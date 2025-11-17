@@ -1,5 +1,5 @@
 use color_eyre::eyre::eyre;
-use color_eyre::Result;
+use color_eyre::{Report, Result, Section};
 use serde::Deserialize;
 
 #[derive(Deserialize, Debug)]
@@ -21,24 +21,30 @@ pub struct Api {
     pub endpoint: String,
 }
 
+pub static VERSION: &'static str = env!("CARGO_PKG_VERSION");
+pub static COMMIT: &'static str = env!("GIT_COMMIT_HASH");
+
 impl Config {
-    pub fn new() -> Result<Self> {
-        let path = locate_config();
-        let file = &std::fs::read_to_string(format!("{}/config.toml", &path))?;
+    pub fn new() -> Result<Self, Report> {
+        let path = locate_config()?;
+        let file = &std::fs::read_to_string(format!("{}/config.toml", &path))
+            .suggestion("Make sure config.toml is available either at $XDG_CONFIG_HOME or at ~/.config/timet/config.toml")?;
         let mut cfg = toml::from_str::<Config>(file)?;
         cfg.config_location = path;
         cfg.api.endpoint = set_endpoint(&cfg.api.endpoint)?;
-        cfg.api.key = std::env::var("TIMET_API_KEY")?;
-        cfg.version = env!("CARGO_PKG_VERSION");
-        cfg.commit = env!("GIT_COMMIT_HASH");
+        cfg.api.key = std::env::var("TIMET_API_KEY")
+            .with_suggestion(move || "Environment variable TIMET_API_KEY must be set")?;
+        cfg.version = VERSION;
+        cfg.commit = COMMIT;
 
         Ok(cfg)
     }
 }
 
-fn set_endpoint(endpoint: &str) -> Result<String> {
+fn set_endpoint(endpoint: &str) -> Result<String, Report> {
     match endpoint {
-        e if e.starts_with("http://") => Err(eyre!("http is not a valid protocol for endpoint")),
+        e if e.starts_with("http://") => Err(eyre!("http is not a valid protocol for endpoint")
+            .suggestion("When setting the API url either set https or no protocl")),
         e if e.starts_with("https://") => {
             let endpoint_https = if e.ends_with('/') {
                 e.to_string()
@@ -52,15 +58,16 @@ fn set_endpoint(endpoint: &str) -> Result<String> {
 }
 
 // Naive handling of config location
-fn locate_config() -> String {
+fn locate_config() -> Result<String, Report> {
     if let Ok(mut path) = std::env::var("TIMET_CONFIG_HOME") {
         path.push_str("/timet");
-        path
+        Ok(path)
     } else if let Ok(mut path) = std::env::var("XDG_CONFIG_HOME") {
         path.push_str("/timet");
-        path
+        Ok(path)
     } else {
-        panic!("NO CONFIG LOCATION FOUND");
+        Err(eyre!("Config path is not set")
+            .suggestion("Either set TIMET_CONFIG_HOME or add timet/config.toml to XDG_CONFIG_HOME"))
     }
 }
 
@@ -90,7 +97,7 @@ mod tests {
     #[test]
     fn locate_config_xdg() {
         std::env::set_var("TIMET_CONFIG_HOME", "config");
-        let location = locate_config();
+        let location = locate_config().unwrap();
         std::env::remove_var("TIMET_CONFIG_HOME");
         assert_eq!(
             "config/timet", location,
@@ -98,7 +105,7 @@ mod tests {
         );
 
         std::env::set_var("XDG_CONFIG_HOME", "testdata");
-        let location = locate_config();
+        let location = locate_config().unwrap();
         std::env::remove_var("XDG_CONFIG_HOME");
         assert_eq!(
             "testdata/timet", location,
