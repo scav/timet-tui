@@ -21,6 +21,9 @@ pub struct Api {
     pub endpoint: String,
 }
 
+pub static VERSION: &'static str = env!("CARGO_PKG_VERSION");
+pub static COMMIT: &'static str = env!("GIT_COMMIT_HASH");
+
 impl Config {
     pub fn new() -> Result<Self, Report> {
         let path = locate_config();
@@ -30,8 +33,8 @@ impl Config {
         cfg.api.endpoint = set_endpoint(&cfg.api.endpoint)?;
         cfg.api.key = std::env::var("TIMET_API_KEY")
             .with_suggestion(move || "Make sure TIMET_API_KEY is set")?;
-        cfg.version = env!("CARGO_PKG_VERSION");
-        cfg.commit = env!("GIT_COMMIT_HASH");
+        cfg.version = VERSION;
+        cfg.commit = COMMIT;
 
         Ok(cfg)
     }

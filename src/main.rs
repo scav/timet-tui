@@ -1,14 +1,15 @@
 use std::{
     sync::mpsc::{self, Receiver, Sender},
-    time::Duration,
+    time::{Duration, SystemTime},
 };
 
 use color_eyre::{Report, Result};
 use eyre::eyre;
+use log::error;
 use ratatui::crossterm::event::{self, Event, KeyCode};
 use timet_tui::{
     api,
-    config::Config,
+    config::{self, Config},
     hours,
     model::{ActiveView, Message, Model, RunningState},
     project, store, tui,
@@ -19,9 +20,28 @@ fn main() -> Result<(), Report> {
     tui::install_panic_hook();
     color_eyre::install()?;
 
+    fern::Dispatch::new()
+        .format(|out, message, record| {
+            out.finish(format_args!(
+                "[{} {} {} v{}({})] {}",
+                humantime::format_rfc3339_seconds(SystemTime::now()),
+                record.level(),
+                record.target(),
+                config::VERSION,
+                config::COMMIT,
+                message
+            ))
+        })
+        .level(log::LevelFilter::Info)
+        .chain(fern::log_file("output.log")?)
+        .apply()?;
+
     let result = match app() {
         Ok(_) => Ok(()),
-        Err(err) => Err(eyre!(err)),
+        Err(err) => {
+            error!("{:?}", err.root_cause());
+            Err(eyre!(err))
+        }
     };
 
     tui::restore_terminal()?;
@@ -144,9 +164,8 @@ fn update(model: &mut Model, msg: Message) -> Result<Option<Message>> {
             model.overview = model.store.get_yearly_overview(model.active_year)?;
             Ok(Some(Message::View(ActiveView::Home)))
         }
-        Message::RefreshFailed => {
-            model.active_error_msg =
-                Some(String::from("Could not refresh items - H(ome) or q(uit)"));
+        Message::RefreshFailed(msg) => {
+            model.active_error_msg = Some(String::from(format!("API error: {}", msg.as_str())));
             Ok(None)
         }
         Message::Hours(m) => project::update(&mut model.register_model, m),

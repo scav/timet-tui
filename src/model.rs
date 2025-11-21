@@ -4,6 +4,7 @@ use std::thread;
 
 use chrono::Datelike;
 use color_eyre::Result;
+use log::error;
 use ratatui::widgets::TableState;
 
 use crate::api::Api;
@@ -34,6 +35,12 @@ pub struct Model {
     pub overview_month: Vec<Month>,
     pub table_state: TableState,
 }
+
+// #[derive(Debug)]
+// pub struct ActiveError {
+//     pub message: String,
+//     pub reason: String,
+// }
 
 impl Model {
     pub fn new(sender: Sender<Message>, api: Api, store: Store, config: Config) -> Result<Self> {
@@ -77,7 +84,12 @@ impl Model {
                     store.insert(items).unwrap();
                     sender.send(Message::RefreshCompleted).unwrap();
                 }
-                Err(_) => sender.send(Message::RefreshFailed).unwrap(),
+                Err(err) => {
+                    error!("{}", err);
+                    sender
+                        .send(Message::RefreshFailed(err.root_cause().to_string()))
+                        .unwrap()
+                }
             };
         });
     }
@@ -157,7 +169,7 @@ pub enum Message {
     RefreshStarted,
     RefreshProgressing(u32),
     RefreshCompleted,
-    RefreshFailed,
+    RefreshFailed(String),
     DetailMonth,
     Quit,
 }
