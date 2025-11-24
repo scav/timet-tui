@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.5.0](https://github.com/scav/timet-tui/compare/v0.4.0...v0.5.0) (2025-11-24)
+
+
+### Features
+
+* adds support for logging to file ([#17](https://github.com/scav/timet-tui/issues/17)) ([63d343b](https://github.com/scav/timet-tui/commit/63d343bc9fbe39c148f2d1bdd9b26ba3d2a5e7ae))
+
+
+### Bug Fixes
+
+* current year is now dynamic instead of hard coded ([1109c94](https://github.com/scav/timet-tui/commit/1109c945e35a88e38bb3b708382579458c9d743c))
+* no longer clone entire project when logging hours ([08ad45a](https://github.com/scav/timet-tui/commit/08ad45a8bbd080d93ccaafcb6e4c189f533f0b13))
+
 ## [0.4.0](https://github.com/scav/timet-tui/compare/v0.3.0...v0.4.0) (2024-11-27)
 
 
