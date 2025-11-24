@@ -6,8 +6,10 @@ on:
       - main
 
 permissions:
+  id-token: write
   contents: write
   pull-requests: write
+  issues: write
 
 jobs:
   release-please:
@@ -15,5 +17,4 @@ jobs:
     steps:
       - uses: googleapis/release-please-action@v4
         with:
-          token: ${{ secrets.PLEASE_TOKEN }}
           release-type: rust
