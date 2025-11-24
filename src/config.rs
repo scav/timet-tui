@@ -21,8 +21,8 @@ pub struct Api {
     pub endpoint: String,
 }
 
-pub static VERSION: &'static str = env!("CARGO_PKG_VERSION");
-pub static COMMIT: &'static str = env!("GIT_COMMIT_HASH");
+pub static VERSION: &str = env!("CARGO_PKG_VERSION");
+pub static COMMIT: &str = env!("GIT_COMMIT_HASH");
 
 impl Config {
     pub fn new() -> Result<Self, Report> {

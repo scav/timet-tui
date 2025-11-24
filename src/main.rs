@@ -176,7 +176,7 @@ fn update(model: &mut Model, msg: Message) -> Result<Option<Message>> {
             Ok(Some(Message::View(ActiveView::Home)))
         }
         Message::RefreshFailed(msg) => {
-            model.active_error_msg = Some(String::from(format!("API error: {}", msg.as_str())));
+            model.active_error_msg = Some(format!("API error: {}", msg.as_str()));
             Ok(None)
         }
         Message::Hours(m) => project::update(&mut model.register_model, m),

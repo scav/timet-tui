@@ -4,7 +4,6 @@ use crate::{
     project,
 };
 use chrono::Datelike;
-use log::info;
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{
