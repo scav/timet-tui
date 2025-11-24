@@ -109,9 +109,9 @@ fn handle_key(key: event::KeyEvent, model: &mut Model) -> Result<Option<Message>
         // Global keys
         KeyCode::Char('q') => Ok(Some(Message::Quit)),
         KeyCode::Char('H') => Ok(Some(Message::Home)),
-        KeyCode::Char('l') => match model.active_project.clone() {
+        KeyCode::Char('l') => match &model.active_project {
             Some(project) => Ok(Some(Message::AddHours(hours::HoursMessage::Open(
-                project.project_id,
+                project.project_id.clone(),
             )))),
             _ => {
                 model.active_error_msg =
