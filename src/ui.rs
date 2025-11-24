@@ -174,7 +174,7 @@ fn render_loading(f: &mut Frame, model: &mut Model) {
     f.render_widget(paragraph, area);
 
     if let Some(error) = &model.active_error_msg {
-        let block = Block::bordered().padding(Padding::new(5, 10, 1, 2));
+        let block = Block::bordered();
         let paragraph_error = Paragraph::new(error.to_string())
             .centered()
             .style(POPUP_STYLE.patch(Style::default().fg(tailwind::RED.c500)))
