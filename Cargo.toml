@@ -25,3 +25,4 @@ rusqlite = { version = "0.37", features = ["bundled", "chrono"] }
 r2d2 = "0.8"
 r2d2_sqlite = "0.31"
 humantime = "2.3.0"
+thiserror = "2.0.17"
