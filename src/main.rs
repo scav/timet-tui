@@ -4,20 +4,38 @@ use std::{
 };
 
 use chrono::Utc;
+use clap::{Parser, Subcommand};
 use color_eyre::{Report, Result, Section};
 use eyre::eyre;
 use log::error;
-use ratatui::crossterm::event::{self, Event, KeyCode};
+use ratatui::{
+    crossterm::event::{self, Event, KeyCode},
+    prelude::Backend,
+    Terminal,
+};
 use timet_tui::{
-    api,
-    config::{self, Config},
-    hours,
+    api, config, hours,
     model::{ActiveView, Message, Model, RunningState},
     project, store, tui,
     ui::view,
 };
 
+#[derive(Parser)]
+#[command(version, about, long_about = None)]
+struct TimetTui {
+    #[command(subcommand)]
+    command: Option<Commands>,
+}
+
+#[derive(Subcommand)]
+enum Commands {
+    /// Create or update the API key in the secure store
+    ApiKey,
+}
+
 fn main() -> Result<(), Report> {
+    let cli = TimetTui::parse();
+
     tui::install_panic_hook();
     color_eyre::install()?;
 
@@ -47,23 +65,32 @@ fn main() -> Result<(), Report> {
         .chain(fern::log_file(log_location)?)
         .apply()?;
 
-    let result = match app() {
-        Ok(_) => Ok(()),
-        Err(err) => {
-            error!("{:?}", err.root_cause());
-            Err(eyre!(err).suggestion(format!("Check logs for more info: {}", log_location)))
-        }
+    let mut terminal = tui::init_terminal()?;
+
+    let result = match &cli.command {
+        Some(Commands::ApiKey) => match config::setup::enter_api_key(&mut terminal) {
+            Ok(api_key) => config::set_api_key(&api_key),
+            Err(err) => Err(err),
+        },
+        None => match app(&mut terminal) {
+            Ok(_) => Ok(()),
+            Err(err) => {
+                error!("{:?}", err.root_cause());
+                Err(eyre!(err)
+                    .with_suggestion(move || format!("Check logs for more info: {}", log_location)))
+            }
+        },
     };
 
     tui::restore_terminal()?;
 
     result
 }
-fn app() -> Result<()> {
-    let config = Config::new()?;
-    let mut terminal = tui::init_terminal()?;
-    let remote_api = api::Api::new(&config);
+fn app(terminal: &mut Terminal<impl Backend>) -> Result<()> {
+    let config = config::Config::new()?;
+
     let store = store::Store::new(&config)?;
+    let remote_api = api::Api::new(&config);
     let (sender, receiver): (Sender<Message>, Receiver<Message>) = mpsc::channel();
     let mut model = Model::new(sender.clone(), remote_api, store, config)?;
 
@@ -107,8 +134,8 @@ fn handle_event(model: &mut Model, receiver: &Receiver<Message>) -> Result<Optio
 fn handle_key(key: event::KeyEvent, model: &mut Model) -> Result<Option<Message>> {
     match key.code {
         // Global keys
-        KeyCode::Char('q') => Ok(Some(Message::Quit)),
         KeyCode::Char('H') => Ok(Some(Message::Home)),
+        KeyCode::Char('q') => Ok(Some(Message::Quit)),
         KeyCode::Char('l') => match &model.active_project {
             Some(project) => Ok(Some(Message::AddHours(hours::HoursMessage::Open(
                 project.project_id.clone(),
