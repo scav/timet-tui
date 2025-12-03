@@ -36,12 +36,6 @@ pub struct Model {
     pub table_state: TableState,
 }
 
-// #[derive(Debug)]
-// pub struct ActiveError {
-//     pub message: String,
-//     pub reason: String,
-// }
-
 impl Model {
     pub fn new(sender: Sender<Message>, api: Api, store: Store, config: Config) -> Result<Self> {
         let now = chrono::Utc::now();

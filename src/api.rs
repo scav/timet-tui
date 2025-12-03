@@ -50,6 +50,11 @@ impl Api {
         }
     }
 
+    pub fn update_config(&mut self, config: &Config) {
+        self.endpoint = config.api.endpoint.clone();
+        self.api_key = config.api.key.clone();
+    }
+
     /// Get all months for given year
     pub fn get_year(
         &self,
