@@ -11,15 +11,20 @@ Features:
 
 ## Configuring
 
-There are two options for configuring this application. The active locations will contain the configuration and the database. The database 
-is not important and can be generated within seconds by pressing `r` when the application is open.
+There are two options for configuring this application. 
+The active locations will contain the configuration and the database. 
+The database is not important and can be generated within seconds by pressing `r` when the application is open.
 
 The configuration locations in order of precedence:
 1. `TIMET_CONFIG_HOME` set to any folder containing `timet.toml`
 2. `XDG_CONFIG_HOME` is set, it will read from  `$XDG_CONFIG_HOME/timet.toml`.
 
-Create the API key when logged into *Timet*, and store it in the environment variable `TIMET_API_KEY`.
-Storing this key securely is (not yet) in the scope for this application. **Do not store the API key in configuration files!**
+Create the API key when logged into *Timet*, and then decide how to store it. The following options exists
+and are provided in order of precedence. Keyring is however the recommended approach.
+1. store it in the environment variable `TIMET_API_KEY`
+2. store it in your local keyring (MacOS and Linux tested) by issuing `timet-tui configure`
+
+**Do not store the API key in the configuration file!**
 
 ### Default configuration
 
