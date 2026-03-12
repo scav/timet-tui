@@ -1,3 +1,4 @@
+#![warn(clippy::all, clippy::pedantic)]
 use std::{
     sync::mpsc::{self, Receiver, Sender},
     time::{Duration, SystemTime},
