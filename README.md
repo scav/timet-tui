@@ -3,6 +3,7 @@
 Manage Timet (partially) from your terminal.
 
 Features:
+
 - [x] overview of year
 - [x] overview of month
 - [ ] details of week
@@ -11,16 +12,18 @@ Features:
 
 ## Configuring
 
-There are two options for configuring this application. 
-The active locations will contain the configuration and the database. 
+There are two options for configuring this application.
+The active locations will contain the configuration and the database.
 The database is not important and can be generated within seconds by pressing `r` when the application is open.
 
 The configuration locations in order of precedence:
-1. `TIMET_CONFIG_HOME` set to any folder containing `timet.toml`
-2. `XDG_CONFIG_HOME` is set, it will read from  `$XDG_CONFIG_HOME/timet.toml`.
 
-Create the API key when logged into *Timet*, and then decide how to store it. The following options exists
+1. `TIMET_CONFIG_HOME` set to any folder containing `timet.toml`
+2. `XDG_CONFIG_HOME` is set, it will read from `$XDG_CONFIG_HOME/timet.toml`.
+
+Create the API key when logged into _Timet_, and then decide how to store it. The following options exists
 and are provided in order of precedence. Keyring is however the recommended approach.
+
 1. store it in the environment variable `TIMET_API_KEY`
 2. store it in your local keyring (MacOS and Linux tested) by issuing `timet-tui configure`
 
@@ -38,27 +41,48 @@ endpoint = '****'
 
 ## Running
 
-After completing configuration and setting up the environment variables, the application is started 
+After completing configuration and setting up the environment variables, the application is started
 either by setting `TIMET_API_KEY` and running it, or by prefixing the run command with
 `TIMET_API_KEY=abcdef1234567 ./timet-tui`.
 
+# Installation
+There are multiple ways to install timet-tui.
 
+## Nix
+
+There is no binary cache or prebuilt binary/repo yet.
+Add the repos and input and add it to pgks, and it will fetch all the dependencies it requires and
+build from source. This takes some time.
+
+```nix
+timet = {
+  url = "github:scav/timet-tui";
+  inputs.nixpkgs.follows = "nixpkgs";
+};
+```
+```nix
+home.packages = with pkgs; [
+  inputs.timet.packages.${pkgs.stdenv.hostPlatform.system}.default
+]
+```
 ### Whalebrew
+
 It is possible to run Timet using [Whalebrew](https://github.com/whalebrew/whalebrew) using the same folders
 and settings files used to run natively.
 
 The following are mapped (and can be seen in the `Dockerfile`):
+
 ```Dockerfile
 LABEL io.whalebrew.config.environment '["TIMET_CONFIG_HOME", "TIMET_API_KEY"]'
 LABEL io.whalebrew.config.volumes '["~/.config:/bin/config:rw"]'
 ```
 
 - Build image:  
-`docker build -t timet .`
-- Install (and accept the questions)    
-`whalebrew install timet`B
+  `docker build -t timet .`
+- Install (and accept the questions)  
+  `whalebrew install timet`B
 - Run
-`TIMET_API_KEY=**** TIMET_CONFIG_HOME=/bin/config timet`
+  `TIMET_API_KEY=**** TIMET_CONFIG_HOME=/bin/config timet`
 
 ## Development
 
