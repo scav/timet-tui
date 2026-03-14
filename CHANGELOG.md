@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.5.1](https://github.com/scav/timet-tui/compare/v0.5.0...v0.5.1) (2026-03-14)
+
+
+### Bug Fixes
+
+* reduce final build size ([93f240a](https://github.com/scav/timet-tui/commit/93f240a4294c5f120170ccae26a387c59f32652e))
+* set clippy to all pedantic ([9796791](https://github.com/scav/timet-tui/commit/9796791be721033d9c4a60a6c70d929cdf786d18))
+
 ## [0.5.0](https://github.com/scav/timet-tui/compare/v0.4.0...v0.5.0) (2025-12-03)
 
 
